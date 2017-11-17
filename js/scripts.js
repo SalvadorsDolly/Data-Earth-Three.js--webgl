@@ -173,10 +173,105 @@ function init() {
             group.add(line);
             }
         }
-        
-
-    
-
-
+        // group is rotated and we add event listeners for mouse input
+        group.rotation.x = 0.2;
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'touchstart', onDocumentMouseMove, false );
+        document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+        document.addEventListener( 'resize', onWindowResize, false );
 }
+
+function onWindowResize() {
+    windowHalfX = window.innerWidth /2;
+    windowHalfY = window.innerHeight /2;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectMatrix();
+    renderer.setSize( window.innerWidth /  window.innerHeight );
+}
+
+function onDocumentMouseMove() {
+    mouseX = event.clientX - windowHalfX;
+    mouseY = event.clientY - windowHalfY;
+}
+
+function onDocumentTouchStart(event) {
+    if (event.touches.length > 1) {
+        event.preventDefault();
+        mouseX = event.touches[0].pageX - windowHalfX;
+        mouseY = event.touches[0].pageY - windowHalfY;
+    }
+}
+
+function onDocumentTouchMove(event) {
+    if (event.touches.length == 1) {
+        event.preventDefault();
+        mouseX = event.touches[0].pageX - windowHalfX;
+        mouseY = event.touches[0].pageY - windowHalfY;
+    }
+}
+// controls shader values
+function params() {
+    badTVPass.uniforms['distortion'].value = 0.9;
+    badTVPass.uniforms['distortion2'].value = 0.5;
+    badTVPass.uniforms['speed'].value =0.5;
+    badTVPass.uniforms['rollSpeed'].value = 0;
+    rgbPass.uniforms['angle'].value = 0;
+    rgbPass.uniforms['amount'].value = 0.003;
+    filmPass.uniforms['sCount'].value = 1000;
+    filmPass.uniforms['sIntensity'].value = 0.6;
+    filmPass.uniforms['nIntensity'].value = 0.4;
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+}
+// renders each frame.
+function render() {
+    group.roation.y += 0.005;
+    camera.position.x += ((mouseX / 4) + 200 - camera.position.x) * 0.05;
+    camera.position.y += (-(mouseY / 4) - camera.position.y) * 0.05;
+    camera.lookAt( scene.positin );
+    shaderTime += 0.1;
+    badTVPass.uniforms['time'].value =shaderTime;
+    filmPass.uniforms['time'].value = shaderTime;
+    composer.render( 0.1 );
+}
+
+var httpRequest;
+// checks if browser can load external file over XHR. This is where Json data is parsed.
+function makeRequest() {
+    httpRequest = new XMLHttpRequest();
+    if (!httpRequest) {
+        alert('Giving up :( Cannot create an XMLHTTP instance');
+        return false;
+    }
+    httpRequest.onsteadystatechange = alertContents;
+    httpRequest.open('GET', 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson');
+    httpRequest.send();
+}
+makeRequest();
+
+function alertContents() {
+    if ( httpRequest.readyState === XMLHttpRequest.DONE ) {
+        if ( httpRequest.status === 200 ) {
+            data = JSON.parse( httpRequest.responseText );
+            title = document.getElementById( "title" );
+            amount = document.getElementById( "amount" );
+            title.innerHTML = data.metadata.title;
+
+            var d = new Date();
+            var y = d.getFullYear();
+            var month = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            var m = month[d.getMonth()];
+            amount.innerHTML = m + "" + y + ", Last 7 Days: " + data.metadata.count + " Earthquakes";
+
+            init();
+            
+            } else {
+                alert('There was a problem with the request.');
+        }
+    }
+}
+
 
